@@ -132,7 +132,8 @@ public:
             int SecondStation = convert<int>(subSecondStr);
             if(AdjacencyGraph.find(FirstStation) == AdjacencyGraph.end())
             {
-                AdjacencyGraph.insert(pair<int, vector<int>>(FirstStation, vector<int>{SecondStation}));         
+                AdjacencyGraph.insert(pair<int, vector<int>>(FirstStation, vector<int>{SecondStation}));
+                visited.insert(pair<int, bool>(FirstStation, false));         
             }
             else
             {
@@ -141,7 +142,8 @@ public:
 
             if(AdjacencyGraph.find(SecondStation) == AdjacencyGraph.end())
             {
-                AdjacencyGraph.insert(pair<int, vector<int>>(SecondStation, vector<int>{FirstStation})); 
+                AdjacencyGraph.insert(pair<int, vector<int>>(SecondStation, vector<int>{FirstStation}));
+                visited.insert(pair<int, bool>(SecondStation, false));         
             }
             else
             {
@@ -150,19 +152,88 @@ public:
         }
 
         cout << "AdjacencyGraph数量：" << AdjacencyGraph.size() << endl;
+        cout << "visited数量：" << visited.size() << endl;
     }
 
     void solve()
     {
+        for(auto iter = GoodsInfo.begin(); iter != GoodsInfo.end(); ++iter)
+        {
+            string subStartStr = iter->second[1].substr(1);
+            int start = convert<int>(subStartStr);
+            string subEndStr = iter->second[2].substr(1);
+            int end = convert<int>(subEndStr);
+            int weight = convert<int>(iter->second[3]);
+            vector<int> MustPass;
+            if(iter->second.size() == 6)
+            {
+                string subMP1Str = iter->second[4].substr(1);
+                string subMP2Str = iter->second[5].substr(1);
+                MustPass = {convert<int>(subMP1Str), convert<int>(subMP2Str)};
+            }
 
+            bfs(iter->first, start, end, weight, MustPass);
+
+            for (auto it = visited.begin(); it != visited.end(); ++it)
+            {
+                it->second = false;
+            }  
+        }      
     }
 
-    bool bfs()
+    bool bfs(string Good, int startNode, int endNode, int weight, vector<int> MustPass)
     {
+        queue<int> STqueue; //站点队列
+        vector<int> path;   //规划路径
+        unordered_map<int, int> prev;   //搜索路径，记录前驱顶点
+        //首节点入队列
+        STqueue.push(startNode);
+        visited.at(startNode) = true;   //首节点已访问，设为true
 
+        while(!STqueue.empty())
+        {
+            //取出当前队列的头节点
+            int currentNode = STqueue.front();
+            STqueue.pop();
+
+            for (int adj : AdjacencyGraph[currentNode])
+            {
+                if(!visited[adj])
+                {
+                    //记录path
+                    prev.insert(pair<int, int>(adj, currentNode));
+
+                    if(adj == endNode)
+                    {
+                        unordered_map<string, vector<int>> route;
+                        path = getPath(prev, startNode, endNode, path);
+                        route.insert(pair<string, vector<int>>(Good, path));
+                        result.push_back(route);
+                        return true;
+                    }
+
+                    STqueue.push(adj);
+                    visited.at(adj) = true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    vector<int> getPath(unordered_map<int, int> prev, int startNode, int endNode, vector<int> path)
+    {
+        if (prev.find(endNode) != prev.end() && startNode != endNode)
+        {
+            path = getPath(prev, startNode, prev[endNode], path);
+        }
+        path.push_back(endNode);
+
+        return path;
     }
 
 private:
+    //输入集信息
     vector<vector<string>> TopoArray;    //拓扑网络输入集
     vector<vector<string>> RequestArray;    //业务需求输入集
     //Topo信息
@@ -175,8 +246,11 @@ private:
     //Request信息
     int GoodsNumber;    //货物数量
     unordered_map<string, vector<string>> GoodsInfo;    //货物信息，站点1，站点2，重量，必经站点列表
-
+    //邻接表信息
     unordered_map<int, vector<int>> AdjacencyGraph; //站点邻接表
+    unordered_map<int, bool> visited;   //已访问的节点为true
+
+    vector<unordered_map<string, vector<int>>> result;  //规划结果
 };
 
 int main ()
