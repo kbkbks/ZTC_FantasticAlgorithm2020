@@ -3,6 +3,8 @@
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
+#include <map>
+#include <queue>
 
 using namespace std;
 
@@ -89,7 +91,8 @@ public:
         //解析轨道与连接站点信息
         for(int i = stationNumber + 1; i < stationNumber + trackNumber + 1; ++i)
         {
-            vector<string> jointStation{TopoArray[i][1], TopoArray[i][2]};;
+            string TopoSubstring = TopoArray[i][2].substr(0, TopoArray[i][2].size()-1); 
+            vector<string> jointStation = {TopoArray[i][1], TopoSubstring};
             TrackInfo.insert(pair<string, vector<string>>(TopoArray[i][0], jointStation));
         }
 
@@ -107,14 +110,48 @@ public:
         for(int i = 1; i < GoodsNumber + 1; ++i)
         {
             vector<string> Info;
-            for(auto iter = RequestArray[i].begin(); iter != RequestArray[i].end(); ++iter)
+            for(auto iter = RequestArray[i].begin(); iter != RequestArray[i].end()-1; ++iter)
             {
                 Info.push_back(*iter);
             }
+            string GoodsSubstring = RequestArray[i].at(RequestArray[i].size()-1).substr(0,(RequestArray[i][RequestArray[i].size()-1]).size()-1);
+            Info.push_back(GoodsSubstring);
             GoodsInfo.insert(pair<string, vector<string>>(RequestArray[i][0], Info));
         }
 
         cout << "GoodsInfo数量：" << GoodsInfo.size() << endl;
+    }
+
+    void buildAdjacencyGraph()
+    {
+        for(auto iter = StationInfo.begin(); iter != StationInfo.end(); ++iter)
+        {
+            string str1 = iter->first.substr(1);
+            int val = convert<int>(str1);
+            if(AdjacencyGraph.find(val) != AdjacencyGraph.end())
+            {
+                for(auto it = TrackInfo.begin(); it != TrackInfo.end(); ++it)
+                {
+                    
+                }
+
+            }
+            else
+            {
+
+            }
+
+        }
+    }
+
+    void solve()
+    {
+
+    }
+
+    bool bfs()
+    {
+
     }
 
 private:
@@ -130,6 +167,8 @@ private:
     //Request信息
     int GoodsNumber;    //货物数量
     unordered_map<string, vector<string>> GoodsInfo;    //货物信息，站点1，站点2，重量，必经站点列表
+
+    unordered_map<int, vector<int>> AdjacencyGraph; //站点邻接表
 };
 
 int main ()
@@ -138,6 +177,8 @@ int main ()
     solution.readData();
     solution.parseTopoData();
     solution.parseRequestData();
+    solution.buildAdjacencyGraph();
+    solution.solve();
 
     return 0;
 }
