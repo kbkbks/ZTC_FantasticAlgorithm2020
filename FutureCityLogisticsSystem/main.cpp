@@ -124,24 +124,32 @@ public:
 
     void buildAdjacencyGraph()
     {
-        for(auto iter = StationInfo.begin(); iter != StationInfo.end(); ++iter)
+        for(auto it = TrackInfo.begin(); it != TrackInfo.end(); ++it)
         {
-            string str1 = iter->first.substr(1);
-            int val = convert<int>(str1);
-            if(AdjacencyGraph.find(val) != AdjacencyGraph.end())
+            string subFirstStr = it->second[0].substr(1);
+            string subSecondStr = it->second[1].substr(1);
+            int FirstStation = convert<int>(subFirstStr);
+            int SecondStation = convert<int>(subSecondStr);
+            if(AdjacencyGraph.find(FirstStation) == AdjacencyGraph.end())
             {
-                for(auto it = TrackInfo.begin(); it != TrackInfo.end(); ++it)
-                {
-                    
-                }
-
+                AdjacencyGraph.insert(pair<int, vector<int>>(FirstStation, vector<int>{SecondStation}));         
             }
             else
             {
-
+                AdjacencyGraph.at(FirstStation).push_back(SecondStation);
             }
 
+            if(AdjacencyGraph.find(SecondStation) == AdjacencyGraph.end())
+            {
+                AdjacencyGraph.insert(pair<int, vector<int>>(SecondStation, vector<int>{FirstStation})); 
+            }
+            else
+            {
+                AdjacencyGraph.at(SecondStation).push_back(FirstStation);
+            }
         }
+
+        cout << "AdjacencyGraph数量：" << AdjacencyGraph.size() << endl;
     }
 
     void solve()
