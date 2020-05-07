@@ -35,7 +35,7 @@ public:
         while(getline(inFile, lineStr))
         {
             //打印整行字符
-            cout << lineStr << endl;
+            //cout << lineStr << endl;
             //每一行用stingstream按逗号分隔读取流，存入str
             stringstream ss(lineStr);
             string str;
@@ -81,15 +81,20 @@ public:
         for(int i = 1; i < stationNumber + 1; ++i)
         {
             int val = convert<int>(TopoArray[i][1]);
-            station.insert(pair<string, int>(TopoArray[i][0], val));
+            StationInfo.insert(pair<string, int>(TopoArray[i][0], val));
         }
+
+        cout << "StationInfo数量：" << StationInfo.size() << endl;
 
         //解析轨道与连接站点信息
         for(int i = stationNumber + 1; i < stationNumber + trackNumber + 1; ++i)
         {
             vector<string> jointStation{TopoArray[i][1], TopoArray[i][2]};;
-            track.insert(pair<string, vector<string>>(TopoArray[i][0], jointStation));
+            TrackInfo.insert(pair<string, vector<string>>(TopoArray[i][0], jointStation));
         }
+
+        cout << "TrackInfo数量：" << TrackInfo.size() << endl;
+
     }
 
     void parseRequestData()
@@ -108,6 +113,8 @@ public:
             }
             GoodsInfo.insert(pair<string, vector<string>>(RequestArray[i][0], Info));
         }
+
+        cout << "GoodsInfo数量：" << GoodsInfo.size() << endl;
     }
 
 private:
@@ -118,8 +125,8 @@ private:
     int trackNumber;    //轨道数
     int trainNumber;    //列车数量
     int maxLoad;    //单个列车容量
-    unordered_map<string, int> station; //站点信息，拣货员数
-    unordered_map<string, vector<string>> track;    //轨道信息，连接站点
+    unordered_map<string, int> StationInfo; //站点信息，拣货员数
+    unordered_map<string, vector<string>> TrackInfo;    //轨道信息，连接站点
     //Request信息
     int GoodsNumber;    //货物数量
     unordered_map<string, vector<string>> GoodsInfo;    //货物信息，站点1，站点2，重量，必经站点列表
