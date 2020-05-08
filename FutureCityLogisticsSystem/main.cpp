@@ -8,6 +8,14 @@
 
 using namespace std;
 
+typedef struct Node
+{
+    int station;    //站点编号
+    int capacity;   //列车容量
+    int people; //拣货员数量
+    vector<int> train;  //列车编号
+}Node;
+
 class Solution
 {
 public:
@@ -133,7 +141,8 @@ public:
             if(AdjacencyGraph.find(FirstStation) == AdjacencyGraph.end())
             {
                 AdjacencyGraph.insert(pair<int, vector<int>>(FirstStation, vector<int>{SecondStation}));
-                visited.insert(pair<int, bool>(FirstStation, false));         
+                visited.insert(pair<int, bool>(FirstStation, false));
+                buildStationUsage(FirstStation);
             }
             else
             {
@@ -143,7 +152,8 @@ public:
             if(AdjacencyGraph.find(SecondStation) == AdjacencyGraph.end())
             {
                 AdjacencyGraph.insert(pair<int, vector<int>>(SecondStation, vector<int>{FirstStation}));
-                visited.insert(pair<int, bool>(SecondStation, false));         
+                visited.insert(pair<int, bool>(SecondStation, false));  
+                buildStationUsage(SecondStation);
             }
             else
             {
@@ -172,7 +182,7 @@ public:
                 MustPass = {convert<int>(subMP1Str), convert<int>(subMP2Str)};
             }
 
-            bfs(iter->first, start, end, weight, MustPass);
+            bool PlanningStatus = bfs(iter->first, start, end, weight, MustPass);
 
             for (auto it = visited.begin(); it != visited.end(); ++it)
             {
@@ -208,6 +218,7 @@ public:
                         unordered_map<string, vector<int>> route;
                         path = getPath(prev, startNode, endNode, path);
                         route.insert(pair<string, vector<int>>(Good, path));
+                        printPath(route);
                         result.push_back(route);
                         return true;
                     }
@@ -232,6 +243,37 @@ public:
         return path;
     }
 
+    void printPath(unordered_map<string, vector<int>> route)
+    {
+        for (auto iter = route.begin(); iter != route.end(); ++iter)
+        {
+            cout << iter->first << "--";
+            for (auto it = iter->second.begin(); it != iter->second.end(); ++it)
+            {
+                cout << *it << ",";
+            }
+            cout << endl;
+        }
+    }
+
+    void buildStationUsage(int StaionNum)
+    {
+        Node node; 
+        string substrStation = convert<string>(StaionNum);
+        string strStation = {"Z"};
+        strStation.append(substrStation);
+
+        node.station = StaionNum;
+        node.capacity = maxLoad;
+        node.people = StationInfo.at(strStation);
+        for(int i = 0; i < trainNumber; ++i)
+        {
+            node.train.push_back(-1);
+        }
+
+        StationUsage.insert(pair<int, Node>(StaionNum, node));        
+    }
+
 private:
     //输入集信息
     vector<vector<string>> TopoArray;    //拓扑网络输入集
@@ -249,6 +291,7 @@ private:
     //邻接表信息
     unordered_map<int, vector<int>> AdjacencyGraph; //站点邻接表
     unordered_map<int, bool> visited;   //已访问的节点为true
+    unordered_map<int, Node> StationUsage;  //站点使用情况
 
     vector<unordered_map<string, vector<int>>> result;  //规划结果
 };
