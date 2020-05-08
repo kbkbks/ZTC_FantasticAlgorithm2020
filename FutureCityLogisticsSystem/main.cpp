@@ -5,13 +5,14 @@
 #include <unordered_map>
 #include <map>
 #include <queue>
+#include <iomanip>
 
 using namespace std;
 
 typedef struct Node
 {
     int station;    //站点编号
-    int capacity;   //列车容量
+    float capacity;   //列车容量
     int people; //拣货员数量
     vector<string> train;  //下标为列车编号，值为货物编号
 }Node;
@@ -19,7 +20,7 @@ typedef struct Node
 typedef struct Route
 {
     string GoodNum; //货物编号
-    int Weight; //货物重量
+    float Weight; //货物重量
     vector<int> Path;   //路径
     int trainNum;   //列车编号
     vector<string> TrackNum;    //轨道编号
@@ -82,6 +83,58 @@ public:
         RequestArray = openFile(requestFile);
     }
 
+    vector<vector<string>> getInfoArray()
+    {
+        vector<vector<string>> strArray;
+        string lineStr;
+        //二维表存储，分别存为string
+        //cout << "输入：" << endl;
+        while(getline(cin, lineStr))
+        {
+            //打印整行字符
+            //cout << lineStr << endl;
+            //每一行用stingstream按逗号分隔读取流，存入str
+            stringstream ss(lineStr);
+            string str;
+            //存入一维数组lineArray
+            vector<string> lineArray;
+            while(getline(ss, str, ','))
+            {
+                lineArray.push_back(str);
+            }
+            strArray.push_back(lineArray);
+        }
+
+        return strArray;
+    }
+
+    void ReadFromTerminal()
+    {
+        AllArray = getInfoArray();
+
+        vector<int> IntegerLine;
+        for(auto iter = AllArray[0].begin(); iter != AllArray[0].end() - 1; ++iter)
+        {
+            int val = convert<int>(*iter);
+            IntegerLine.push_back(val);
+        }
+        float Weight = convert<float>(AllArray[0][3]);
+        stationNumber = IntegerLine[0];
+        trackNumber = IntegerLine[1];
+        trainNumber = IntegerLine[2];
+        maxLoad = Weight;
+
+        for(int i = 0; i < stationNumber + trackNumber + 1; ++i)
+        {
+            TopoArray.push_back(AllArray[i]);
+        }
+
+        for(int i = stationNumber + trackNumber + 1; i < AllArray.size(); ++i)
+        {
+            RequestArray.push_back(AllArray[i]);
+        }
+    }
+
     void parseTopoData()
     {
         //解析TopoArray第一行
@@ -117,6 +170,28 @@ public:
 
     }
 
+    void NewparseTopoData()
+    {
+        //解析站点与拣货员信息
+        for(int i = 1; i < stationNumber + 1; ++i)
+        {
+            int val = convert<int>(TopoArray[i][1]);
+            StationInfo.insert(pair<string, int>(TopoArray[i][0], val));
+        }
+
+        //cout << "StationInfo数量：" << StationInfo.size() << endl;
+
+        //解析轨道与连接站点信息
+        for(int i = stationNumber + 1; i < stationNumber + trackNumber + 1; ++i)
+        { 
+            vector<string> jointStation = {TopoArray[i][1], TopoArray[i][2]};
+            TrackInfo.insert(pair<string, vector<string>>(TopoArray[i][0], jointStation));
+        }
+
+        //cout << "TrackInfo数量：" << TrackInfo.size() << endl;
+
+    }
+
     void parseRequestData()
     {
         //解析RequestArray第一行
@@ -131,8 +206,30 @@ public:
             {
                 Info.push_back(*iter);
             }
+
+            //去\r专用
             string GoodsSubstring = RequestArray[i].at(RequestArray[i].size()-1).substr(0,(RequestArray[i][RequestArray[i].size()-1]).size()-1);
             Info.push_back(GoodsSubstring);
+            GoodsInfo.insert(pair<string, vector<string>>(RequestArray[i][0], Info));
+        }
+
+        //cout << "GoodsInfo数量：" << GoodsInfo.size() << endl;
+    }
+
+    void NewparseRequestData()
+    {
+        //解析RequestArray第一行
+        int val = convert<int>(RequestArray[0][0]);
+        GoodsNumber = val;
+
+        //解析货物信息
+        for(int i = 1; i < GoodsNumber + 1; ++i)
+        {
+            vector<string> Info;
+            for(auto iter = RequestArray[i].begin(); iter != RequestArray[i].end(); ++iter)
+            {
+                Info.push_back(*iter);
+            }
             GoodsInfo.insert(pair<string, vector<string>>(RequestArray[i][0], Info));
         }
 
@@ -200,13 +297,15 @@ public:
             int start = convert<int>(subStartStr);
             string subEndStr = iter->second[2].substr(1);
             int end = convert<int>(subEndStr);
-            int weight = convert<int>(iter->second[3]);
+            float weight = convert<float>(iter->second[3]);
             vector<int> MustPass;
-            if(iter->second.size() == 6)
+            string error = {"null"};
+            if(iter->second[4] != error)
             {
-                string subMP1Str = iter->second[4].substr(1);
-                string subMP2Str = iter->second[5].substr(1);
-                MustPass = {convert<int>(subMP1Str), convert<int>(subMP2Str)};
+                //string subMP1Str = iter->second[4].substr(1);
+                //string subMP2Str = iter->second[5].substr(1);
+                //MustPass = {convert<int>(subMP1Str), convert<int>(subMP2Str)};
+                MustPass.push_back(1);
             }
 
             bool PlanningStatus = bfs(iter->first, start, end, weight, MustPass);
@@ -223,7 +322,7 @@ public:
         }      
     }
 
-    bool bfs(string Good, int startNode, int endNode, int weight, vector<int> MustPass)
+    bool bfs(string Good, int startNode, int endNode, float weight, vector<int> MustPass)
     {
         queue<int> STqueue; //站点队列
         vector<int> path;   //规划路径 
@@ -325,7 +424,7 @@ public:
         StationUsage[endNode].people--;
     }
 
-    void saveResult(string Good, int weight, vector<int> path, int Tr)
+    void saveResult(string Good, float weight, vector<int> path, int Tr)
     {
         Route route;
         route.GoodNum = Good;
@@ -341,7 +440,7 @@ public:
         result.push_back(route);
     }
 
-    void saveFailed(string Good, int weight)
+    void saveFailed(string Good, float weight)
     {
         Route route;
         route.GoodNum = Good;
@@ -356,6 +455,7 @@ public:
     string findTrack(int firstStaion, int secondStation)
     {
         vector<string> strPairStation;
+        vector<string> strReverseStation;
 
         string subFirstStation = convert<string>(firstStaion);
         string strFirstStation = {"Z"};
@@ -367,6 +467,9 @@ public:
         strSecondStation.append(subSecondStation);
         strPairStation.push_back(strSecondStation);
 
+        strReverseStation.push_back(strSecondStation);
+        strReverseStation.push_back(strFirstStation);
+
         for (auto iter = TrackInfo.begin(); iter != TrackInfo.end(); ++iter)
         {
             if (iter->second == strPairStation)
@@ -375,6 +478,11 @@ public:
                 
                 return iter->first;
             }
+            if (iter->second == strReverseStation)
+            {
+                return iter->first;
+            }
+            
         }
 
         string error = "null";
@@ -384,21 +492,21 @@ public:
     void printResult()
     {
         int successPlanedNum = result.size();
-        int SumSuccessWeight = 0;  //规划成功货物总重量
+        float SumSuccessWeight = 0;  //规划成功货物总重量
         for (auto iter = result.begin(); iter != result.end(); ++iter)
         {
             SumSuccessWeight  = SumSuccessWeight + iter->Weight;
         }
 
         int failPlanedNum = Failed.size();
-        int SumFailedWeight = 0;    //规划失败总重量
+        float SumFailedWeight = 0;    //规划失败总重量
         for (auto iter = Failed.begin(); iter != Failed.end(); ++iter)
         {
             SumFailedWeight = SumFailedWeight + iter->Weight;
         }
 
         //cout << successPlanedNum << "," << SumSuccessWeight << endl;
-        cout << failPlanedNum << "," << SumFailedWeight << endl;
+        cout << failPlanedNum << "," << setiosflags(ios::fixed) << setprecision(3) << SumFailedWeight << endl;
 
         //打印成功的Track和tr
         for (auto iter = result.begin(); iter != result.end(); ++iter)
@@ -432,16 +540,69 @@ public:
 
     }
 
+    void writeResult()
+    {
+        ofstream outFile("data/result.txt");
+
+        int successPlanedNum = result.size();
+        float SumSuccessWeight = 0;  //规划成功货物总重量
+        for (auto iter = result.begin(); iter != result.end(); ++iter)
+        {
+            SumSuccessWeight  = SumSuccessWeight + iter->Weight;
+        }
+
+        int failPlanedNum = Failed.size();
+        float SumFailedWeight = 0;    //规划失败总重量
+        for (auto iter = Failed.begin(); iter != Failed.end(); ++iter)
+        {
+            SumFailedWeight = SumFailedWeight + iter->Weight;
+        }
+
+        //cout << successPlanedNum << "," << SumSuccessWeight << endl;
+        outFile << failPlanedNum << "," << setiosflags(ios::fixed) << setprecision(3) << SumFailedWeight << endl;
+
+        //打印成功的Track和tr
+        for (auto iter = result.begin(); iter != result.end(); ++iter)
+        {
+            //打印Good
+            outFile << iter->GoodNum << endl;
+            //打印Track
+            for (auto it = iter->TrackNum.begin(); it != iter->TrackNum.end() - 1; ++it)
+            {
+                outFile << *it << ",";
+            }
+            outFile << iter->TrackNum[iter->TrackNum.size()-1] << endl;
+            //打印Tr
+            for (int i = 0; i < iter->TrackNum.size() - 1; ++i)
+            {
+                outFile << iter->trainNum << ",";
+            }
+            outFile << iter->trainNum << endl;
+        }
+
+        //打印失败的货物
+        for (auto iter = Failed.begin(); iter != Failed.end(); ++iter)
+        {
+            //打印Good
+            outFile << iter->GoodNum << endl;
+            //打印Track
+            outFile << "null" << endl;
+            //打印Tr
+            outFile << "null" << endl;
+        }
+    }
+
 
 private:
     //输入集信息
+    vector<vector<string>> AllArray;    //所有数据输入集
     vector<vector<string>> TopoArray;    //拓扑网络输入集
     vector<vector<string>> RequestArray;    //业务需求输入集
     //Topo信息
     int stationNumber;  //站点数
     int trackNumber;    //轨道数
     int trainNumber;    //列车数量
-    int maxLoad;    //单个列车容量
+    float maxLoad;    //单个列车容量
     unordered_map<string, int> StationInfo; //站点信息，拣货员数
     unordered_map<string, vector<string>> TrackInfo;    //轨道信息，连接站点
     //Request信息
@@ -459,12 +620,19 @@ private:
 int main ()
 {
     Solution solution;
-    solution.readData();
-    solution.parseTopoData();
-    solution.parseRequestData();
+    //标准输入
+    solution.ReadFromTerminal();
+    solution.NewparseTopoData();
+    solution.NewparseRequestData();
+
+    //文件读取
+    //solution.readData();
+    //solution.parseTopoData();
+    //solution.parseRequestData();
     solution.buildAdjacencyGraph();
     solution.solve();
     solution.printResult();
+    solution.writeResult();
 
     return 0;
 }
