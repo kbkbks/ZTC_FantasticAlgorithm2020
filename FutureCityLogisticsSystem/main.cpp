@@ -13,8 +13,17 @@ typedef struct Node
     int station;    //站点编号
     int capacity;   //列车容量
     int people; //拣货员数量
-    vector<int> train;  //列车编号
+    vector<string> train;  //下标为列车编号，值为货物编号
 }Node;
+
+typedef struct Route
+{
+    string GoodNum; //货物编号
+    int Weight; //货物重量
+    vector<int> Path;   //路径
+    int trainNum;   //列车编号
+    vector<string> TrackNum;    //轨道编号
+}Route;
 
 class Solution
 {
@@ -94,7 +103,7 @@ public:
             StationInfo.insert(pair<string, int>(TopoArray[i][0], val));
         }
 
-        cout << "StationInfo数量：" << StationInfo.size() << endl;
+        //cout << "StationInfo数量：" << StationInfo.size() << endl;
 
         //解析轨道与连接站点信息
         for(int i = stationNumber + 1; i < stationNumber + trackNumber + 1; ++i)
@@ -104,7 +113,7 @@ public:
             TrackInfo.insert(pair<string, vector<string>>(TopoArray[i][0], jointStation));
         }
 
-        cout << "TrackInfo数量：" << TrackInfo.size() << endl;
+        //cout << "TrackInfo数量：" << TrackInfo.size() << endl;
 
     }
 
@@ -127,7 +136,7 @@ public:
             GoodsInfo.insert(pair<string, vector<string>>(RequestArray[i][0], Info));
         }
 
-        cout << "GoodsInfo数量：" << GoodsInfo.size() << endl;
+        //cout << "GoodsInfo数量：" << GoodsInfo.size() << endl;
     }
 
     void buildAdjacencyGraph()
@@ -161,8 +170,26 @@ public:
             }
         }
 
-        cout << "AdjacencyGraph数量：" << AdjacencyGraph.size() << endl;
-        cout << "visited数量：" << visited.size() << endl;
+        //cout << "AdjacencyGraph数量：" << AdjacencyGraph.size() << endl;
+        //cout << "visited数量：" << visited.size() << endl;
+    }
+
+    void buildStationUsage(int StaionNum)
+    {
+        Node node; 
+        string substrStation = convert<string>(StaionNum);
+        string strStation = {"Z"};
+        strStation.append(substrStation);
+
+        node.station = StaionNum;
+        node.capacity = maxLoad;
+        node.people = StationInfo.at(strStation);
+        for(int i = 0; i < trainNumber; ++i)
+        {
+            node.train.push_back("null");
+        }
+
+        StationUsage.insert(pair<int, Node>(StaionNum, node));        
     }
 
     void solve()
@@ -184,6 +211,11 @@ public:
 
             bool PlanningStatus = bfs(iter->first, start, end, weight, MustPass);
 
+            if(PlanningStatus != true)
+            {
+                saveFailed(iter->first, weight);
+            }
+
             for (auto it = visited.begin(); it != visited.end(); ++it)
             {
                 it->second = false;
@@ -194,37 +226,60 @@ public:
     bool bfs(string Good, int startNode, int endNode, int weight, vector<int> MustPass)
     {
         queue<int> STqueue; //站点队列
-        vector<int> path;   //规划路径
+        vector<int> path;   //规划路径 
         unordered_map<int, int> prev;   //搜索路径，记录前驱顶点
         //首节点入队列
         STqueue.push(startNode);
         visited.at(startNode) = true;   //首节点已访问，设为true
 
-        while(!STqueue.empty())
+        //出发点拣货员数大于0，列车容量大于等于载货量, 没有必经节点
+        if(StationUsage[startNode].people > 0 && StationUsage[startNode].capacity >= weight && MustPass.empty())
         {
-            //取出当前队列的头节点
-            int currentNode = STqueue.front();
-            STqueue.pop();
-
-            for (int adj : AdjacencyGraph[currentNode])
+            for(int Tr = 0; Tr < trainNumber; ++Tr)
             {
-                if(!visited[adj])
+                //出发节点列车是否被占用
+                if(StationUsage[startNode].train[Tr] == "null")
                 {
-                    //记录path
-                    prev.insert(pair<int, int>(adj, currentNode));
+                    //StationUsage[startNode].train[i] = Good;
 
-                    if(adj == endNode)
+                    while(!STqueue.empty())
                     {
-                        unordered_map<string, vector<int>> route;
-                        path = getPath(prev, startNode, endNode, path);
-                        route.insert(pair<string, vector<int>>(Good, path));
-                        printPath(route);
-                        result.push_back(route);
-                        return true;
+                        //取出当前队列的头节点
+                        int currentNode = STqueue.front();
+                        STqueue.pop();
+
+                        for (int adj : AdjacencyGraph[currentNode])
+                        {
+                            //判断后驱节点列车是否为空
+                            if(StationUsage[adj].train[Tr] == "null")
+                            {
+                                if(!visited[adj])
+                                {
+                                    //记录path
+                                    prev.insert(pair<int, int>(adj, currentNode));
+
+                                    if(adj == endNode)
+                                    {
+                                        //判断到达点拣货员数是否足够
+                                        if(StationUsage[adj].people > 0)
+                                        {
+                                            path = getPath(prev, startNode, endNode, path);
+                                            //printPath(Good, path, Tr);
+                                            recordStationUsage(Good, path, Tr);
+                                            saveResult(Good, weight, path, Tr);
+
+                                            return true;
+                                        }
+                                    }
+
+                                    STqueue.push(adj);
+                                    visited.at(adj) = true;
+                                }                                
+                            }
+
+                        }
                     }
 
-                    STqueue.push(adj);
-                    visited.at(adj) = true;
                 }
             }
         }
@@ -243,36 +298,140 @@ public:
         return path;
     }
 
-    void printPath(unordered_map<string, vector<int>> route)
+    void printPath(string Good, vector<int> path, int Tr)
     {
-        for (auto iter = route.begin(); iter != route.end(); ++iter)
+        cout << Good << "--" << endl;
+        for (auto it = path.begin(); it != path.end(); ++it)
         {
-            cout << iter->first << "--";
-            for (auto it = iter->second.begin(); it != iter->second.end(); ++it)
+            cout << *it << ",";
+        }
+        cout << endl;
+        for (int i  = 0; i < path.size(); ++i)
+        {
+            cout << Tr << ",";
+        }
+        cout << endl;
+    }
+
+    void recordStationUsage(string Good, vector<int> path, int Tr)
+    {
+        int startNode = *path.begin();
+        int endNode = *(path.end()-1);
+        for(auto iter = path.begin(); iter != path.end(); ++iter)
+        {
+            StationUsage[*iter].train[Tr] = Good;
+        }
+        StationUsage[startNode].people--;
+        StationUsage[endNode].people--;
+    }
+
+    void saveResult(string Good, int weight, vector<int> path, int Tr)
+    {
+        Route route;
+        route.GoodNum = Good;
+        route.Weight = weight;
+        route.Path = path;
+        route.trainNum = Tr + 1;    //列车编号从1开始
+        for(int i = 0; i < path.size() - 1; ++i)
+        {
+            string trackNum = findTrack(path[i], path[i + 1]);
+            route.TrackNum.push_back(trackNum);
+        }
+
+        result.push_back(route);
+    }
+
+    void saveFailed(string Good, int weight)
+    {
+        Route route;
+        route.GoodNum = Good;
+        route.Weight = weight;
+        route.trainNum = -1;
+        string FailedTrack = {"null"};
+        route.TrackNum.push_back(FailedTrack);
+
+        Failed.push_back(route);
+    }
+
+    string findTrack(int firstStaion, int secondStation)
+    {
+        vector<string> strPairStation;
+
+        string subFirstStation = convert<string>(firstStaion);
+        string strFirstStation = {"Z"};
+        strFirstStation.append(subFirstStation);
+        strPairStation.push_back(strFirstStation);
+
+        string subSecondStation = convert<string>(secondStation);
+        string strSecondStation = {"Z"};
+        strSecondStation.append(subSecondStation);
+        strPairStation.push_back(strSecondStation);
+
+        for (auto iter = TrackInfo.begin(); iter != TrackInfo.end(); ++iter)
+        {
+            if (iter->second == strPairStation)
+            {
+                //cout << iter->first << endl;
+                
+                return iter->first;
+            }
+        }
+
+        string error = "null";
+        return error;
+    }
+
+    void printResult()
+    {
+        int successPlanedNum = result.size();
+        int SumSuccessWeight = 0;  //规划成功货物总重量
+        for (auto iter = result.begin(); iter != result.end(); ++iter)
+        {
+            SumSuccessWeight  = SumSuccessWeight + iter->Weight;
+        }
+
+        int failPlanedNum = Failed.size();
+        int SumFailedWeight = 0;    //规划失败总重量
+        for (auto iter = Failed.begin(); iter != Failed.end(); ++iter)
+        {
+            SumFailedWeight = SumFailedWeight + iter->Weight;
+        }
+
+        //cout << successPlanedNum << "," << SumSuccessWeight << endl;
+        cout << failPlanedNum << "," << SumFailedWeight << endl;
+
+        //打印成功的Track和tr
+        for (auto iter = result.begin(); iter != result.end(); ++iter)
+        {
+            //打印Good
+            cout << iter->GoodNum << endl;
+            //打印Track
+            for (auto it = iter->TrackNum.begin(); it != iter->TrackNum.end() - 1; ++it)
             {
                 cout << *it << ",";
             }
-            cout << endl;
+            cout << iter->TrackNum[iter->TrackNum.size()-1] << endl;
+            //打印Tr
+            for (int i = 0; i < iter->TrackNum.size() - 1; ++i)
+            {
+                cout << iter->trainNum << ",";
+            }
+            cout << iter->trainNum << endl;
         }
-    }
 
-    void buildStationUsage(int StaionNum)
-    {
-        Node node; 
-        string substrStation = convert<string>(StaionNum);
-        string strStation = {"Z"};
-        strStation.append(substrStation);
-
-        node.station = StaionNum;
-        node.capacity = maxLoad;
-        node.people = StationInfo.at(strStation);
-        for(int i = 0; i < trainNumber; ++i)
+        //打印失败的货物
+        for (auto iter = Failed.begin(); iter != Failed.end(); ++iter)
         {
-            node.train.push_back(-1);
+            //打印Good
+            cout << iter->GoodNum << endl;
+            //打印Track
+            cout << "null" << endl;
+            //打印Tr
+            cout << "null" << endl;
         }
 
-        StationUsage.insert(pair<int, Node>(StaionNum, node));        
     }
+
 
 private:
     //输入集信息
@@ -293,7 +452,8 @@ private:
     unordered_map<int, bool> visited;   //已访问的节点为true
     unordered_map<int, Node> StationUsage;  //站点使用情况
 
-    vector<unordered_map<string, vector<int>>> result;  //规划结果
+    vector<Route> result;  //规划成功结果
+    vector<Route> Failed;   //规划失败
 };
 
 int main ()
@@ -304,6 +464,7 @@ int main ()
     solution.parseRequestData();
     solution.buildAdjacencyGraph();
     solution.solve();
+    solution.printResult();
 
     return 0;
 }
