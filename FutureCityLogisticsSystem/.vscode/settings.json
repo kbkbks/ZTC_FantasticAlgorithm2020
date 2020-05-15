@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "iostream": "cpp",
+        "iosfwd": "cpp",
+        "string": "cpp"
+    },
+    "cpplint.lineLength": 150,
+    "cpplint.filters": [
+        "-build/include_subdir",
+        "-build/namespaces"
+    ]
+}
