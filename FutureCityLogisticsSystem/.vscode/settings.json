@@ -1,11 +1,8 @@
 {
     "files.associations": {
-        "fstream": "cpp",
-        "*.tcc": "cpp",
-        "istream": "cpp",
-        "string": "cpp",
         "iostream": "cpp",
-        "iomanip": "cpp"
+        "iosfwd": "cpp",
+        "string": "cpp"
     },
     "cpplint.lineLength": 150,
     "cpplint.filters": [
